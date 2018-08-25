@@ -76,16 +76,17 @@ module Dry
       end
 
       # Returns true for an instance of a {Try::Value} monad.
-      def value?
-        is_a?(Value)
+      def success?
+        value?
       end
-      alias_method :success?, :value?
 
       # Returns true for an instance of a {Try::Error} monad.
-      def error?
-        is_a?(Error)
+      def failure?
+        error?
       end
-      alias_method :failure?, :error?
+
+      protected def value?; end,
+                def error?; end
 
       # Returns self.
       #
@@ -159,6 +160,16 @@ module Dry
           "Try::Value(#{ @value.inspect })"
         end
         alias_method :inspect, :to_s
+
+        # @return [Boolean]
+        def value?
+          true
+        end
+
+        # @return [Boolean]
+        def error?
+          false
+        end
       end
 
       # Represents a result of a failed execution.
@@ -201,6 +212,16 @@ module Dry
         # @return [Boolean]
         def ===(other)
           Error === other && exception === other.exception
+        end
+
+        # @return [Boolean]
+        def value?
+          false
+        end
+
+        # @return [Boolean]
+        def error?
+          true
         end
       end
 

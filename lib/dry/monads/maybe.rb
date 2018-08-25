@@ -47,16 +47,17 @@ module Dry
       end
 
       # Returns true for an instance of a {Maybe::None} monad.
-      def none?
-        is_a?(None)
+      def failure?
+        none?
       end
-      alias_method :failure?, :none?
 
       # Returns true for an instance of a {Maybe::Some} monad.
-      def some?
-        is_a?(Some)
+      def success?
+        some?
       end
-      alias_method :success?, :some?
+
+      protected def none?; end,
+                def some?; end
 
       # Returns self, added to keep the interface compatible with that of Either monad types.
       #
@@ -111,6 +112,16 @@ module Dry
           "Some(#{ @value.inspect })"
         end
         alias_method :inspect, :to_s
+
+        # @return [Boolean]
+        def none?
+          false
+        end
+
+        # @return [Boolean]
+        def some?
+          true
+        end
       end
 
       # Represents an absence of a value, i.e. the value nil.
@@ -178,6 +189,16 @@ module Dry
         # @private
         def hash
           None.instance.object_id
+        end
+
+        # @return [Boolean]
+        def none?
+          true
+        end
+
+        # @return [Boolean]
+        def some?
+          false
         end
       end
 
