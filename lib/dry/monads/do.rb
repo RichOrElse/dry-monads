@@ -16,6 +16,11 @@ module Dry
 
           @result = result
         end
+
+        # @return [Proc]
+        def self.[](result)
+          -> * { raise self, result, caller }
+        end
       end
 
       # Generates a module that passes a block to methods
@@ -97,25 +102,23 @@ module Dry
 
       protected
 
-      # @private
-      def self.halt(result)
-        raise Halt.new(result)
-      end
+      using Module.new { # refinements for results coercion.
+        refine Array do
+          def or_one
+            one? ? yield(first) : self
+          end
 
-      # @private
-      def self.coerce_to_monad(ms)
-        return ms if ms.size != 1
-
-        fst = ms[0]
-
-        case fst
-        when Array, List
-          list = fst.is_a?(Array) ? List.coerce(fst) : fst
-          [list.traverse]
-        else
-          ms
+          def coerce_or(results) [List.coerce(self).traverse] end
         end
-      end
+
+        refine List do
+          def coerce_or(results) [traverse] end
+        end
+
+        refine Object do
+          def coerce_or(results) results end
+        end
+      } # using refinements for results coercion
 
       # @private
       def self.wrap_method(target, method)
@@ -125,12 +128,11 @@ module Dry
               super
             else
               super do |*ms|
-                ms = Do.coerce_to_monad(ms)
-                unwrapped = ms.map { |r|
-                  m = r.to_monad
-                  m.or { Do.halt(m) }.value!
-                }
-                ms.size == 1 ? unwrapped[0] : unwrapped
+                ms.or_one { |o| o.coerce_or(ms) }
+                  .map(&:to_monad)
+                  .map { |m| m.or(&Do::Halt[m]) }
+                  .map(&:value!)
+                  .or_one(&:itself)
               end
             end
           rescue Halt => e
